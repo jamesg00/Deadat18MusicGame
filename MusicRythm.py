@@ -53,6 +53,7 @@ pygame.display.set_caption('Rhythm Game')
 clock = pygame.time.Clock()
 
 notes = []
+title_font = pygame.font.Font('assets/upheavtt.ttf', 24)  # or desired font size
 
 
 class TitleState:
@@ -122,6 +123,7 @@ class Menu:
         self.selected_trail = 0
         self.trail_dropdown_open = False
         self.trail_rects = []
+        self.trail_dropdown_rect = pygame.Rect(10, 10, 150, 20)  # Adjusted width
 
     def handle_input(self, event):
         if event.type == pygame.KEYDOWN:
@@ -141,7 +143,7 @@ class Menu:
                     self.trail_dropdown_open = False
         return None
 
-    def draw(self, screen, font):
+    def draw(self, screen, title_font):
         screen.fill(BLACK)
 
         self.sin_offset += 0.2
@@ -153,27 +155,37 @@ class Menu:
                 self.hover_option = idx
 
             if idx == self.hover_option:
-                self.draw_option(screen, font, option, idx)
+                self.draw_option(screen, title_font, option, idx)
             else:
-                # Draw non-hovered options with white letters
-                text = font.render(option, True, (255, 255, 255))
+                text = title_font.render(option, True, (255, 255, 255))
                 screen.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 200 + idx * 50))
 
-        # Draw trail dropdown button
-        self.trail_dropdown_rect = pygame.Rect(10, 10 + math.sin(self.sin_offset) * 5, 100, 20)
-        pygame.draw.rect(screen, (255, 255, 255), self.trail_dropdown_rect)
-        trail_text = font.render("Trail: " + self.trails[self.selected_trail], True, (0, 0, 0))
-        screen.blit(trail_text, (self.trail_dropdown_rect.x + 10, self.trail_dropdown_rect.y + 5 + math.sin(self.sin_offset) * 2))
-
+      # Draw trail dropdown button
+            pygame.draw.rect(screen, (255, 255, 255), self.trail_dropdown_rect)  # Draw rectangle
+            trail_text = title_font.render("Trail: " + self.trails[self.selected_trail], True, (0, 0, 0))
+            screen.blit(trail_text, (self.trail_dropdown_rect.x + 10, self.trail_dropdown_rect.y + 5))  # Draw text
         if self.trail_dropdown_open:
-            self.trail_rects = []
-            for i, trail in enumerate(self.trails):
-                trail_rect = pygame.Rect(self.trail_dropdown_rect.x, self.trail_dropdown_rect.y + (i + 1) * 20, self.trail_dropdown_rect.width, 20)
-                self.trail_rects.append(trail_rect)
-                pygame.draw.rect(screen, (255, 255, 255), trail_rect)
-                trail_text = font.render(trail, True, (0, 0, 0))
-                screen.blit(trail_text, (trail_rect.x + 10, trail_rect.y + 5))
+            if not self.trail_rects:
+                self.trail_rects = []
+                for i, trail in enumerate(self.trails):
+                    trail_rect = pygame.Rect(
+                        self.trail_dropdown_rect.x,
+                        self.trail_dropdown_rect.y + (i + 1) * 20,
+                        self.trail_dropdown_rect.width,
+                        20
+                    )
+                    self.trail_rects.append(trail_rect)
 
+            small_font = pygame.font.Font('assets/upheavtt.ttf', 14)  # Load your font at size 14
+
+            for i, trail_rect in enumerate(self.trail_rects):
+                pygame.draw.rect(screen, (255, 255, 255), trail_rect)
+                trail_text = small_font.render(self.trails[i], True, (0, 0, 0))
+                text_rect = trail_text.get_rect(center=trail_rect.center)
+                screen.blit(trail_text, text_rect)
+                pygame.draw.line(screen, (0, 0, 0), (trail_rect.x, trail_rect.y), (trail_rect.x + trail_rect.width, trail_rect.y), 1)
+        else:
+            self.trail_rects = []
         # Draw trail
         if self.selected_trail == 0:
             # No trail
@@ -193,19 +205,110 @@ class Menu:
                 opacity = int(255 * (1 - i / len(self.mouse_trail)))
                 x = pos[0] + math.sin(offset + i * 0.1) * 5
                 y = pos[1] + math.sin(offset + i * 0.1 + math.pi / 2) * 5
-                pygame.draw.circle(screen, (r, g, b), (int(x), int(y)), 2)
+                s = pygame.Surface((5, 5), pygame.SRCALPHA)
+                s.set_alpha(opacity)  # Set alpha value
+                pygame.draw.circle(s, (r, g, b), (2, 2), 2)
+                screen.blit(s, (int(x), int(y)))
         elif self.selected_trail == 2:
-            # Fading Trail
+                # Neon Trail
+                self.mouse_trail.append((mouse_pos, self.sin_offset))
+                if len(self.mouse_trail) > 100:
+                    self.mouse_trail.pop(0)
+
+                for i, (pos, offset) in enumerate(self.mouse_trail):
+                    color = (57, 255, 20)  # Neon green
+                    opacity = int(255 * (1 - i / len(self.mouse_trail)))
+                    s = pygame.Surface((5, 5), pygame.SRCALPHA)
+                    s.set_alpha(opacity)
+                    pygame.draw.circle(s, color, (2, 2), 2)
+                    screen.blit(s, pos)
+        elif self.selected_trail == 3:
+            # Sparkle Trail
             self.mouse_trail.append((mouse_pos, self.sin_offset))
             if len(self.mouse_trail) > 100:
                 self.mouse_trail.pop(0)
 
-            # Draw fading trail
             for i, (pos, offset) in enumerate(self.mouse_trail):
                 opacity = int(255 * (1 - i / len(self.mouse_trail)))
+                s = pygame.Surface((8, 8), pygame.SRCALPHA)
+                s.set_alpha(opacity)
+                # Draw 8-bit star
+                pygame.draw.line(s, (255, 255, 255), (0, 4), (8, 4), 2)
+                pygame.draw.line(s, (255, 255, 255), (4, 0), (4, 8), 2)
+                pygame.draw.line(s, (255, 255, 255), (0, 0), (8, 8), 2)
+                pygame.draw.line(s, (255, 255, 255), (8, 0), (0, 8), 2)
+                screen.blit(s, (pos[0] - 4, pos[1] - 4))
+        elif self.selected_trail == 4:
+                # Fire Trail
+                self.mouse_trail.append((mouse_pos, self.sin_offset))
+                if len(self.mouse_trail) > 100:
+                    self.mouse_trail.pop(0)
+
+                for i, (pos, offset) in enumerate(self.mouse_trail):
+                    fire_size = random.randint(3, 6)
+                    color = (255, random.randint(100, 200), 0)  # Orange-red fire
+                    opacity = int(255 * (1 - i / len(self.mouse_trail)))
+                    s = pygame.Surface((fire_size, fire_size), pygame.SRCALPHA)
+                    s.set_alpha(opacity)
+                    pygame.draw.circle(s, color, (fire_size // 2, fire_size // 2), fire_size // 2)
+                    screen.blit(s, pos)
+        elif self.selected_trail == 5:
+            # Rainbow Trail
+            self.mouse_trail.append((mouse_pos, self.sin_offset))
+            if len(self.mouse_trail) > 100:
+                self.mouse_trail.pop(0)
+
+            for i, (pos, offset) in enumerate(self.mouse_trail):
+                rainbow_angle = offset + i * 0.1
+                r = int(math.sin(rainbow_angle) * 128 + 128)
+                g = int(math.sin(rainbow_angle + 2 * math.pi / 3) * 128 + 128)
+                b = int(math.sin(rainbow_angle + 4 * math.pi / 3) * 128 + 128)
+                opacity = int(255 * (1 - i / len(self.mouse_trail)))
                 s = pygame.Surface((5, 5), pygame.SRCALPHA)
-                pygame.draw.circle(s, (255, 255, 255, opacity), (2, 2), 2)
+                s.set_alpha(opacity)
+                pygame.draw.circle(s, (r, g, b), (2, 2), 2)
                 screen.blit(s, pos)
+        elif self.selected_trail == 6:
+            # Starburst Trail
+            if not hasattr(self, 'starburst_trails'):
+                self.starburst_trails = []
+
+            self.starburst_trails.append({
+                'pos': mouse_pos,
+                'stars': [
+                    {'x': mouse_pos[0], 'y': mouse_pos[1], 'vx': 2, 'vy': 2, 'opacity': 255},
+                    {'x': mouse_pos[0], 'y': mouse_pos[1], 'vx': -2, 'vy': 2, 'opacity': 255},
+                    {'x': mouse_pos[0], 'y': mouse_pos[1], 'vx': 2, 'vy': -2, 'opacity': 255},
+                    {'x': mouse_pos[0], 'y': mouse_pos[1], 'vx': -2, 'vy': -2, 'opacity': 255}
+                ]
+            })
+
+            for trail in self.starburst_trails:
+                for star in trail['stars']:
+                    star['x'] += star['vx']
+                    star['y'] += star['vy']
+
+                    if star['x'] < 0 or star['x'] > SCREEN_WIDTH:
+                        star['vx'] = -star['vx']
+                    if star['y'] < 0 or star['y'] > SCREEN_HEIGHT:
+                        star['vy'] = -star['vy']
+
+                    star['opacity'] -= 5
+                    if star['opacity'] < 0:
+                        star['opacity'] = 0
+
+                    s = pygame.Surface((8, 8), pygame.SRCALPHA)
+                    s.set_alpha(star['opacity'])
+                    # Draw 8-bit star
+                    pygame.draw.line(s, (255, 255, 255), (0, 4), (8, 4), 2)
+                    pygame.draw.line(s, (255, 255, 255), (4, 0), (4, 8), 2)
+                    pygame.draw.line(s, (255, 255, 255), (0, 0), (8, 8), 2)
+                    pygame.draw.line(s, (255, 255, 255), (8, 0), (0, 8), 2)
+                    screen.blit(s, (star['x'] - 4, star['y'] - 4))
+
+            self.starburst_trails = [trail for trail in self.starburst_trails if any(star['opacity'] > 0 for star in trail['stars'])]
+
+
 
     def draw_option(self, screen, font, option, idx):
         # Draw hovered option with sine wave movement and RGB letters
@@ -223,10 +326,9 @@ class Menu:
 options = ['Play Level', 'Settings', 'Quit']
 
 # Define the trail options
-trails = ['RGB Trail', 'Fading Trail']
+trails = ["No Trail", "RGB Trail", "Neon Trail", "Sparkle Trail", "Fire Trail", "Rainbow Trail", "Starburst Trail"]
 
 menu = Menu(["Play Level", "Settings", "Quit"], trails)
-title_font = pygame.font.Font('assets/upheavtt.ttf', 64)
 
 
 title_text = title_font.render("Rhythm Game", True, WHITE)
@@ -475,19 +577,27 @@ star_trail = []
 
 # Initialize key states
 key_states = {
-    pygame.K_w: False,
     pygame.K_a: False,
     pygame.K_s: False,
     pygame.K_d: False,
+    pygame.K_f: False,
 }
 
 key_rgb_values = {
-    pygame.K_w: (255, 255, 255),
     pygame.K_a: (255, 255, 255),
     pygame.K_s: (255, 255, 255),
     pygame.K_d: (255, 255, 255),
+    pygame.K_f: (255, 255, 255),
 }
 
+fade_in_start_time = None
+game_ended = False
+waiting_for_key = False
+perfect_chain = 0
+perfect_chain_text_alpha = 0
+perfect_chain_text_start_time = None
+perfect_chain_duration = 2000  # 2 seconds
+note_hit = False 
 
 while running:
     current_time = pygame.time.get_ticks() - start_time
@@ -568,7 +678,7 @@ while running:
         pygame.display.flip()
         clock.tick(60)
     elif state == STATE_MENU:
-            print("Drawing trail with type:", trail_type)
+          #  print("Drawing trail with type:", trail_type)
             
             if not song_playing:
                 play_random_song(songs)
@@ -609,6 +719,12 @@ while running:
                             selection_sounds_played[idx] = True
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
+                    if menu.trail_dropdown_rect.collidepoint(mouse_pos):
+                        menu.trail_dropdown_open = not menu.trail_dropdown_open
+                    for i, trail_rect in enumerate(menu.trail_rects):
+                        if trail_rect.collidepoint(mouse_pos):
+                            menu.selected_trail = i
+                            menu.trail_dropdown_open = False
                     for idx, option in enumerate(menu.options):
                         option_rect = pygame.Rect(SCREEN_WIDTH // 2 - len(option) * 20 // 2, 200 + idx * 50, len(option) * 20, 30)
                         if option_rect.collidepoint(mouse_pos):
@@ -645,50 +761,44 @@ while running:
                 mouse_pos = pygame.mouse.get_pos()
 
                 if previous_mouse_pos is not None and mouse_pos != previous_mouse_pos:
-                    # Clear the screen to remove previous trails
-                    screen.fill(BLACK)  
-                    menu.draw(screen, menu_font)  # Redraw the menu
+                    # Clear screen and redraw menu
+                    screen.fill(BLACK)
+                    menu.draw(screen, menu_font)
 
-                    # Spawn new star
-                    star_trail.append((mouse_pos[0], mouse_pos[1], 0))  # Start with opacity 0
 
-                # Move and fade stars
+
                 for i, (x, y, opacity) in enumerate(star_trail):
-                    y -= 2  # Move star up
-                    opacity += 10  # Fade in star
+                    opacity += 10
                     if opacity > 255:
                         opacity = 255
                     star_trail[i] = (x, y, opacity)
 
-                    # Draw star
-                    s = pygame.Surface((5, 5), pygame.SRCALPHA)
-                    pygame.draw.circle(s, (255, 255, 255, opacity), (2, 2), 2)
-                    screen.blit(s, (x, y))
+                    '''
+                    # Draw star with chosen trail pattern
+                    if menu.selected_trail == 2:  # No trail
+                        pass
+                    elif menu.selected_trail == 0:  # RGB Trail
+                        color_angle = pygame.time.get_ticks() * 0.01 + i * 0.1
+                        r = int(math.sin(color_angle) * 128 + 128)
+                        g = int(math.sin(color_angle + 2 * math.pi / 3) * 128 + 128)
+                        b = int(math.sin(color_angle + 4 * math.pi / 3) * 128 + 128)
+                        s = pygame.Surface((5, 5), pygame.SRCALPHA)
+                        pygame.draw.circle(s, (r, g, b, opacity), (2, 2), 2)
+                        screen.blit(s, (x, y))
+                    elif menu.selected_trail == 1:  # Fading Trail
+                        s = pygame.Surface((5, 5), pygame.SRCALPHA)
+                        color = (57, 255, 20)  # Neon green
+                        pygame.draw.circle(s, (color[0], color[1], color[2], opacity), (2, 2), 2)
+                        screen.blit(s, (x, y))
+'''
+                # Remove off-screen stars
+                star_trail = [(x, y, opacity) for x, y, opacity in star_trail if 0 < x < SCREEN_WIDTH and 0 < y < SCREEN_HEIGHT]
 
-                # Remove stars that are off the screen
-                star_trail = [(x, y, opacity) for x, y, opacity in star_trail if y > 0]
-
-                # Reset previous_mouse_pos to handle new trail drawing
+                # Update previous mouse position
                 previous_mouse_pos = mouse_pos
             else:
-                # Calculate sine wave values
-                sine_wave_value = math.sin(pygame.time.get_ticks() / 1000) * 100
-
-                # Update star trail
-                star_trail.append((SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + sine_wave_value, 255))
-
-                # Draw trail
-                for i, (x, y, opacity) in enumerate(star_trail):
-                    s = pygame.Surface((5, 5), pygame.SRCALPHA)
-                    pygame.draw.circle(s, (255, 0, 0, opacity), (2, 2), 2)  # Red color
-                    screen.blit(s, (x, y))
-
-                # Remove stars that are off the screen
-                star_trail = [(x, y, opacity) for x, y, opacity in star_trail if y > 0]
-
-                # Draw menu and buttons
-                screen.fill(BLACK)
-                menu.draw(screen, menu_font)  # Redraw the menu
+                star_trail = []
+                previous_mouse_pos = None
 
             pygame.display.flip()
             clock.tick(60)
@@ -705,7 +815,7 @@ while running:
         pygame.draw.rect(screen, WHITE, music_volume_meter_rect, 1)
         music_volume_percentage = pygame.mixer.music.get_volume() * 100
         for i in range(int(music_volume_percentage * 2.8)):
-            hue = (music_volume_percentage / 100) * 0.83  
+            hue = (music_volume_percentage / 100) * 0.83
             h_i = int(hue * 6)
             f = hue * 6 - h_i
             p = 1 * (1 - 1)
@@ -725,7 +835,7 @@ while running:
             elif h_i == 5:
                 r, g, b = 1, p, q
 
-            r, g, b = int(r * 255), int(g * 255), int(b * 255)  
+            r, g, b = int(r * 255), int(g * 255), int(b * 255)
             pygame.draw.rect(screen, (r, g, b), (music_volume_meter_rect.x + i, music_volume_meter_rect.y, 1, 25))
 
         music_volume_text = font.render("Music Volume: " + str(int(pygame.mixer.music.get_volume() * 100)) + "%", True, WHITE)
@@ -739,13 +849,12 @@ while running:
         pygame.draw.rect(screen, WHITE, sfx_volume_meter_rect, 1)
         sfx_volume_percentage = note5_sound.get_volume() * 100
         for i in range(int(sfx_volume_percentage * 2.8)):
-            hue = (sfx_volume_percentage / 100) * 0.83  
+            hue = (sfx_volume_percentage / 100) * 0.83
             h_i = int(hue * 6)
             f = hue * 6 - h_i
             p = 1 * (1 - 1)
             q = 1 * (1 - f * 1)
             t = 1 * (1 - (1 - f) * 1)
-
             if h_i == 0:
                 r, g, b = 1, t, p
             elif h_i == 1:
@@ -759,7 +868,7 @@ while running:
             elif h_i == 5:
                 r, g, b = 1, p, q
 
-            r, g, b = int(r * 255), int(g * 255), int(b * 255)  
+            r, g, b = int(r * 255), int(g * 255), int(b * 255)
             pygame.draw.rect(screen, (r, g, b), (sfx_volume_meter_rect.x + i, sfx_volume_meter_rect.y, 1, 25))
 
         sfx_volume_text = font.render("SFX Volume: " + str(int(note5_sound.get_volume() * 100)) + "%", True, WHITE)
@@ -773,40 +882,6 @@ while running:
         back_button_image = pygame.transform.scale(back_button_image, (25, 25))
         back_button_rect = pygame.Rect(settings_window_rect.x + 10, settings_window_rect.y + 140, 25, 25)
         screen.blit(back_button_image, back_button_rect)
-
-        # Keybind settings
-        keybind_font = pygame.font.Font('assets/upheavtt.ttf', 24)
-        keybind_text = 'Keybinds:'
-        keybind_surface = keybind_font.render(keybind_text, True, WHITE)
-        screen.blit(keybind_surface, (settings_window_rect.x + 10, settings_window_rect.y + 170))
-
-        # Keybind options
-        keybind_options = [
-            {'key': 'W', 'binding': pygame.K_w, 'text': 'Move Up'},
-            {'key': 'A', 'binding': pygame.K_a, 'text': 'Move Left'},
-            {'key': 'S', 'binding': pygame.K_s, 'text': 'Move Down'},
-            {'key': 'D', 'binding': pygame.K_d, 'text': 'Move Right'},
-        ]
-
-        for i, option in enumerate(keybind_options):
-            option_text = f'{option["key"]}: {option["text"]}'
-            option_surface = keybind_font.render(option_text, True, WHITE)
-            screen.blit(option_surface, (settings_window_rect.x + 10, settings_window_rect.y + 200 + i * 30))
-
-        # Change keybind button
-        change_keybind_button = pygame.Rect(settings_window_rect.x + 10, settings_window_rect.y + 320, 150, 30)
-        change_keybind_text = 'Change Keybind'
-        change_keybind_surface = keybind_font.render(change_keybind_text, True, WHITE)
-        pygame.draw.rect(screen, WHITE, change_keybind_button, 1)
-        screen.blit(change_keybind_surface, (change_keybind_button.x + 10, change_keybind_button.y + 5))
-
-        # Save keybind button
-        save_keybind_button = pygame.Rect(settings_window_rect.x + 170, settings_window_rect.y + 320, 100, 30)
-        save_keybind_text = 'Save'
-        save_keybind_surface = keybind_font.render(save_keybind_text, True, WHITE)
-        pygame.draw.rect(screen, WHITE, save_keybind_button, 1)
-        screen.blit(save_keybind_surface, (save_keybind_button.x + 10, save_keybind_button.y + 5))
-
 
         # Handle user input to change volume
         for event in pygame.event.get():
@@ -827,44 +902,20 @@ while running:
                     back_button_animation = True
                     back_button_animation_time = pygame.time.get_ticks()
                     note6_sound.play()
-                elif change_keybind_button.collidepoint(mouse_pos):
-                    # Get the selected keybind option
-                    selected_option = None
-                    for i, option in enumerate(keybind_options):
-                        option_rect = pygame.Rect(settings_window_rect.x + 10, settings_window_rect.y + 200 + i * 30, 200, 30)
-                        if option_rect.collidepoint(mouse_pos):
-                            selected_option = option
-                            break
-
-                    # Change keybind
-                    if selected_option:
-                        waiting_for_key = True
-                        while waiting_for_key:
-                            for event in pygame.event.get():
-                                if event.type == pygame.KEYDOWN:
-                                    new_binding = event.key
-                                    selected_option['binding'] = new_binding
-                                    waiting_for_key = False
-
-                elif save_keybind_button.collidepoint(mouse_pos):
-                    # Save keybinds to JSON file
-                    with open('keybinds.json', 'w') as f:
-                        json.dump({option['key']: option['binding'] for option in keybind_options}, f)
             elif event.type == pygame.MOUSEMOTION:
                 mouse_pos = pygame.mouse.get_pos()
-                if music_volume_meter_rect.collidepoint(mouse_pos) and event.buttons[0]:
+                if music_volume_meter_rect.collidepoint(mouse_pos) and pygame.mouse.get_pressed()[0]:
                     new_volume = (mouse_pos[0] - music_volume_meter_rect.x) / 280
                     pygame.mixer.music.set_volume(new_volume)
                     for song in songs:
                         song.set_volume(new_volume)
-            elif sfx_volume_meter_rect.collidepoint(mouse_pos) and event.buttons[0]:
-                new_volume = (mouse_pos[0] - sfx_volume_meter_rect.x) / 280
-                note5_sound.set_volume(new_volume)
-                note6_sound.set_volume(new_volume)
+                elif sfx_volume_meter_rect.collidepoint(mouse_pos) and pygame.mouse.get_pressed()[0]:
+                    new_volume = (mouse_pos[0] - sfx_volume_meter_rect.x) / 280
+                    note5_sound.set_volume(new_volume)
+                    note6_sound.set_volume(new_volume)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     state = STATE_MENU
-
 
         # Update back button animation
         if back_button_animation:
@@ -877,9 +928,9 @@ while running:
                 back_button_frame = 1
                 back_button_animation = False
 
-
         pygame.display.flip()
         clock.tick(60)
+
 
     elif state == STATE_GAME:
                 # Initialize key states
@@ -935,6 +986,7 @@ while running:
 
                     notes.remove(note)
                     score += 1
+                    note_hit = True
                         # Trigger explosion animation
         
                     explosion_start_time = pygame.time.get_ticks()
@@ -942,10 +994,21 @@ while running:
                     explosion_x = LANES[note.lane] - 7
                     explosion_y = HIT_Y
 
-                    
 
-                    
-                        # Trigger animation on "a" key hit
+
+
+
+                if note_hit:
+                    perfect_chain += 1
+                    note_hit = False  # Reset for next frame
+                else:
+                    if perfect_chain > 0:
+                        perfect_chain = 0
+
+                if perfect_chain >= 5:
+                    perfect_chain_text_start_time = pygame.time.get_ticks()
+                    perfect_chain_text_alpha = 255
+
                     '''
                     if KEYS[note.lane] == pygame.K_a:
                         animation_start_time = pygame.time.get_ticks()
@@ -953,7 +1016,7 @@ while running:
                         animation_x = random.randint(0, SCREEN_WIDTH - animation_frames[0].get_width())
                         animation_y = random.randint(0, SCREEN_HEIGHT - animation_frames[0].get_height())
                     '''
-
+                print(perfect_chain)
         # Remove notes that are off the screen
         notes = [note for note in notes if note.y <= SCREEN_HEIGHT]
 
@@ -968,36 +1031,29 @@ while running:
 
         # Draw keys based on their state
         font = pygame.font.Font('assets/upheavtt.ttf', 80)
-        keys = ['W', 'A', 'S', 'D']
+        keys = ['A', 'S', 'D', 'F']
         key_x_positions = [59, 137, 215, 295]  # offset +10 on x-axis
         key_y_position = HIT_Y - 18
         wave_amplitude = 10
         wave_frequency = 0.005
 
         key_press_timers = {
-            'W': 0,
             'A': 0,
             'S': 0,
             'D': 0,
+            'F': 0,
         }
 
         key_rgb_values = {
-            'W': (255, 255, 255),
             'A': (255, 255, 255),
             'S': (255, 255, 255),
             'D': (255, 255, 255),
+            'F': (255, 255, 255),
         }
 
         for i, key in enumerate(keys):
             color = key_rgb_values[key]
-            if key == 'W' and key_states[pygame.K_w]:
-                key_press_timers[key] = pygame.time.get_ticks()
-                color_angle = current_time * 0.01
-                r = int(math.sin(color_angle) * 128 + 128)
-                g = int(math.sin(color_angle + 2 * math.pi / 3) * 128 + 128)
-                b = int(math.sin(color_angle + 4 * math.pi / 3) * 128 + 128)
-                key_rgb_values[key] = (r, g, b)
-            elif key == 'A' and key_states[pygame.K_a]:
+            if key == 'A' and key_states[pygame.K_a]:
                 key_press_timers[key] = pygame.time.get_ticks()
                 color_angle = current_time * 0.01
                 r = int(math.sin(color_angle) * 128 + 128)
@@ -1018,6 +1074,13 @@ while running:
                 g = int(math.sin(color_angle + 2 * math.pi / 3) * 128 + 128)
                 b = int(math.sin(color_angle + 4 * math.pi / 3) * 128 + 128)
                 key_rgb_values[key] = (r, g, b)
+            elif key == 'F' and key_states[pygame.K_f]:
+                key_press_timers[key] = pygame.time.get_ticks()
+                color_angle = current_time * 0.01
+                r = int(math.sin(color_angle) * 128 + 128)
+                g = int(math.sin(color_angle + 2 * math.pi / 3) * 128 + 128)
+                b = int(math.sin(color_angle + 4 * math.pi / 3) * 128 + 128)
+                key_rgb_values[key] = (r, g, b)
 
             if key_press_timers[key] != 0 and pygame.time.get_ticks() - key_press_timers[key] < 5000:
                 color = key_rgb_values[key]
@@ -1031,7 +1094,26 @@ while running:
             wave_y = key_y_position + wave_amplitude * math.sin(current_time * wave_frequency + i * 0.5)
             screen.blit(key_surface, (key_x_positions[i], wave_y))
                 
-                
+
+
+
+        # Draw perfect chain text
+        if perfect_chain >= 5:
+            font = pygame.font.Font('assets/upheavtt.ttf', 32)
+            perfect_chain_text = f'Perfect Chain: {perfect_chain}'
+            perfect_chain_surface = font.render(perfect_chain_text, True, (255, 255, 255))
+            perfect_chain_x = SCREEN_WIDTH / 2 - perfect_chain_surface.get_width() / 2
+            perfect_chain_y = 20
+
+            if perfect_chain_text_start_time is not None:
+                elapsed_time = pygame.time.get_ticks() - perfect_chain_text_start_time
+                perfect_chain_text_alpha = int(255 * (1 - (elapsed_time / perfect_chain_duration)))
+                if perfect_chain_text_alpha < 0:
+                    perfect_chain_text_alpha = 0
+
+            perfect_chain_surface.set_alpha(perfect_chain_text_alpha)
+            screen.blit(perfect_chain_surface, (perfect_chain_x, perfect_chain_y))      
+
         # Draw animation frames if triggered
         if animation_start_time is not None:
             elapsed_time = pygame.time.get_ticks() - animation_start_time
